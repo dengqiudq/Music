@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.trf.myapplication">
+    <uses-permission-sdk-23 android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission-sdk-23 android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+    <uses-permission-sdk-23 android:name="android.permission.MOUNT_UNMOUNT_FILESYSTEMS"/>
+    <application
+        android:allowBackup="true"
+        android:icon="@drawable/app_music"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+
+        <activity android:name=".MainActivity" >
+
+        </activity>
+
+        <activity android:name=".ListActivity">
+
+
+
+        </activity>
+
+        <activity android:name=".ScreenSplash">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+
+        <service android:name=".service.MyMusicPlayerService">
+
+        </service>
+
+
+    </application>
+
+</manifest>
