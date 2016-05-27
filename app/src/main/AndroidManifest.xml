@@ -11,11 +11,11 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
-        <activity android:name=".MainActivity" >
+        <activity android:name=".MainActivity" android:launchMode="singleInstance">
 
         </activity>
 
-        <activity android:name=".ListActivity">
+        <activity android:name=".ListActivity" >
 
 
 
@@ -24,7 +24,6 @@
         <activity android:name=".ScreenSplash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>

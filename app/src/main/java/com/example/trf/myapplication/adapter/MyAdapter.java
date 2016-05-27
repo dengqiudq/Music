@@ -11,6 +11,7 @@ import android.widget.BaseAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.example.trf.myapplication.ListActivity;
 import com.example.trf.myapplication.MainActivity;
 import com.example.trf.myapplication.R;
 import com.example.trf.myapplication.Util.AudioUtils;
@@ -57,9 +58,9 @@ public class MyAdapter extends BaseAdapter{
             viewHolder = new ViewHolder();
             viewHolder.tvName = (TextView) convertView.findViewById(R.id.tvName);
             viewHolder.tvSinger = (TextView) convertView.findViewById(R.id.tvSinger);
-            viewHolder.tvAlbum = (TextView) convertView.findViewById(R.id.tvAlbum);
+//            viewHolder.tvAlbum = (TextView) convertView.findViewById(R.id.tvAlbum);
             viewHolder.tvDuration = (TextView) convertView.findViewById(R.id.tvDuration);
-            viewHolder.ivPic = (ImageView) convertView.findViewById(R.id.ivPic);
+//            viewHolder.ivPic = (ImageView) convertView.findViewById(R.id.ivPic);
 
             convertView.setTag(viewHolder);
         }
@@ -72,19 +73,20 @@ public class MyAdapter extends BaseAdapter{
         viewHolder = (ViewHolder) convertView.getTag();
         viewHolder.tvName.setText(s.getFileName().trim());
         viewHolder.tvSinger.setText(s.getSinger().trim());
-        viewHolder.tvAlbum.setText(s.getAlbum().trim());
+//        viewHolder.tvAlbum.setText(s.getAlbum().trim());
         viewHolder.tvDuration.setText(allTime);
 
-        String albumArt = AudioUtils.getAlbumArt(s.getAlbumpic(), context);
-        Bitmap bm = BitmapFactory.decodeFile(albumArt);
-        BitmapDrawable drawable = new BitmapDrawable();
+//        String albumArt = AudioUtils.getAlbumArt(s.getAlbumpic(), context);
+//        Bitmap bm = BitmapFactory.decodeFile(albumArt);
+//        BitmapDrawable drawable = new BitmapDrawable();
 
-        if(albumArt == null){
-            viewHolder.ivPic.setImageResource(R.drawable.app_music);
-        }else {
-            BitmapDrawable bmpDraw = new BitmapDrawable(bm);
-            viewHolder.ivPic.setImageDrawable(bmpDraw);
-        }
+//        if(albumArt == null){
+//            viewHolder.ivPic.setImageResource(R.drawable.img_album_background);
+//        }else {
+//            BitmapDrawable bmpDraw = new BitmapDrawable(bm);
+//            viewHolder.ivPic.setImageDrawable(bmpDraw);
+//        }
+
 
         return convertView;
     }
@@ -92,9 +94,9 @@ public class MyAdapter extends BaseAdapter{
     private class ViewHolder{
         protected TextView tvName;
         protected TextView tvSinger;
-        protected TextView tvAlbum;
+//        protected TextView tvAlbum;
         protected TextView tvDuration;
-        protected ImageView ivPic;
+//        protected ImageView ivPic;
     }
 
 }

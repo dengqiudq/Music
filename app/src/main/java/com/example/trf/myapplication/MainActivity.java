@@ -6,26 +6,38 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.drawable.BitmapDrawable;
 import android.media.MediaPlayer;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Bundle;
 import android.os.Message;
 import android.text.TextUtils;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.WindowManager;
+import android.widget.ArrayAdapter;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.ListView;
+import android.widget.RelativeLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.trf.myapplication.Util.AudioUtils;
 import com.example.trf.myapplication.Util.ConstUtil;
 import com.example.trf.myapplication.Util.FileUtil;
+import com.example.trf.myapplication.adapter.MyAdapter;
+import com.example.trf.myapplication.entity.Song;
 import com.example.trf.myapplication.service.MyMusicPlayerService;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -36,22 +48,22 @@ public class MainActivity extends Activity {
     public static TextView songName;
     private TextView currentTime;
     private TextView allTime;
-    private ImageButton ibPlay;
+    public static ImageButton ibPlay;
     private ImageButton ibNext;
     private ImageButton ibPrev;
     private ImageButton ibcycle;
+    private ImageButton ibmenu;
     public static ImageView imageView;
     public static SeekBar seekBar;
-    public static boolean isPlaying;
-
-//    private boolean isIsPlaying
-
+    private ArrayList<Song> files;
     Intent intent;
+    Context context;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        context = this;
         //获取控件
         initView();
         //设置监听
@@ -64,27 +76,16 @@ public class MainActivity extends Activity {
         if (TextUtils.isEmpty(change)) {
             setStartService();
         } else {
-            sendBroadcastToService(ConstUtil.REFRESHUI);
-            ibPlay.setImageResource(android.R.drawable.ic_media_pause);
+            sendBroadcastToService(ConstUtil.REFRESHMAIN);
         }
 
     }
 
-//    @Override
-//    protected void onNewIntent(Intent intent) {
-//        super.onNewIntent(intent);
-//        if (!isPlaying){
-//            setStartService(intent);
-//        }
-//    }
 
     //开启Service
     private void setStartService() {
         Intent intent = new Intent(this, MyMusicPlayerService.class);
-        int position = getIntent().getIntExtra("position", 0);
-        intent.putExtra("position", position);
         startService(intent);
-        ibPlay.setImageResource(android.R.drawable.ic_media_pause);
     }
 
 
@@ -98,6 +99,7 @@ public class MainActivity extends Activity {
         ibPrev = (ImageButton) findViewById(R.id.prev_button);
         ibcycle = (ImageButton) findViewById(R.id.cycle_button);
         imageView = (ImageView) findViewById(R.id.imageView);
+        ibmenu = (ImageButton) findViewById(R.id.menu_button);
 
     }
 
@@ -114,41 +116,44 @@ public class MainActivity extends Activity {
         switch (view.getId()) {
 
             case R.id.start_button:
-                if (!isPlaying) {
-                    ibPlay.setImageResource(android.R.drawable.ic_media_pause);
+                if (!ListActivity.isPlaying) {
                     sendBroadcastToService(ConstUtil.STATE_PLAY);
-                    isPlaying = true;
+                    ListActivity.isPlaying = true;
+                    ibPlay.setImageResource(R.drawable.player_pause);
                 } else {
-                    ibPlay.setImageResource(android.R.drawable.ic_media_play);
                     sendBroadcastToService(ConstUtil.STATE_PAUSE);
-                    isPlaying = false;
+                    ListActivity.isPlaying = false;
+                    ibPlay.setImageResource(R.drawable.player_play);
                 }
                 break;
 
             case R.id.next_button:
-                ibPlay.setImageResource(android.R.drawable.ic_media_pause);
-                sendBroadcastToService(ConstUtil.STATE_NEXT);
-                isPlaying = true;
+                sendBroadcastToService(ConstUtil.STATE_MAINNEXT);
+                ListActivity.isPlaying = true;
+                ibPlay.setImageResource(R.drawable.player_pause);
                 break;
 
             case R.id.prev_button:
-                ibPlay.setImageResource(android.R.drawable.ic_media_pause);
                 sendBroadcastToService(ConstUtil.STATE_PREVIOUS);
-                isPlaying = true;
+                ListActivity.isPlaying = true;
+                ibPlay.setImageResource(R.drawable.player_pause);
                 break;
 
             case R.id.cycle_button:
                 if (MyMusicPlayerService.mediaPlayer != null) {
                     if (MyMusicPlayerService.mediaPlayer.isLooping()) {
                         MyMusicPlayerService.mediaPlayer.setLooping(false);
-                        ibcycle.setImageResource(android.R.drawable.ic_menu_rotate);
-                        Toast.makeText(MainActivity.this, "单曲循环关闭", Toast.LENGTH_SHORT).show();
+                        ibcycle.setImageResource(R.drawable.icon_playing_mode_repeat_all);
+                        Toast.makeText(MainActivity.this, "列表循环", Toast.LENGTH_SHORT).show();
                     } else {
                         MyMusicPlayerService.mediaPlayer.setLooping(true);
-                        ibcycle.setImageResource(android.R.drawable.ic_popup_sync);
-                        Toast.makeText(MainActivity.this, "单曲循环开启", Toast.LENGTH_SHORT).show();
+                        ibcycle.setImageResource(R.drawable.icon_playing_mode_repeat_cur);
+                        Toast.makeText(MainActivity.this, "单曲循环", Toast.LENGTH_SHORT).show();
                     }
                 }
+                break;
+            case R.id.menu_button:
+
                 break;
         }
 
@@ -190,6 +195,7 @@ public class MainActivity extends Activity {
         sendBroadcast(intent);
     }
 
+
     private BroadcastReceiver receiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -218,17 +224,7 @@ public class MainActivity extends Activity {
         }
     };
 
-//    @Override
-//    public boolean onKeyDown(int keyCode, KeyEvent event) {
-//        if(keyCode == KeyEvent.KEYCODE_HEADSETHOOK){
-//            if(MyMusicPlayerService.mediaPlayer.isPlaying()){
-//                sendBroadcastToService(ConstUtil.STATE_PAUSE);
-//            }else{
-//                sendBroadcastToService(ConstUtil.STATE_PLAY);
-//            }
-//        }
-//        return super.onKeyDown(keyCode, event);
-//    }
+
 
 
     @Override

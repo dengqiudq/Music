@@ -59,7 +59,6 @@ public class AudioUtils {
             do {
                 song = new Song();
                 // 文件名
-//                song.setFileName(cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME)));
                 song.setFileName(cursor.getString(1));
                 // 歌曲名
                 song.setTitle(cursor.getString(2));

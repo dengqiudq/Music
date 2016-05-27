@@ -1,25 +1,25 @@
 package com.example.trf.myapplication.service;
 
+import android.app.ActivityManager;
 import android.app.Service;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.media.MediaPlayer;
-import android.net.Uri;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
-import android.provider.MediaStore.Audio.Media;
 import android.util.DisplayMetrics;
-import android.view.KeyEvent;
 import android.view.WindowManager;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
+
+import com.example.trf.myapplication.ListActivity;
 import com.example.trf.myapplication.MainActivity;
 import com.example.trf.myapplication.R;
 import com.example.trf.myapplication.Util.AudioUtils;
@@ -27,8 +27,8 @@ import com.example.trf.myapplication.Util.ConstUtil;
 import com.example.trf.myapplication.entity.Song;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by user on 16-5-18.
@@ -41,7 +41,7 @@ public class MyMusicPlayerService extends Service implements MediaPlayer.OnCompl
     //存放音乐名的数组
     private ArrayList<Song> files;
     //当前的播放的音乐
-    int currIndex=0;
+    public static int currIndex=0;
     //拖动seekBar定义boolean值
     public static boolean isauto = false;
     //发送广播定义Intent
@@ -51,26 +51,23 @@ public class MyMusicPlayerService extends Service implements MediaPlayer.OnCompl
 
     Context context;
 
-    // 刷新SeekBar进度
-    private static final int UPDATE_PROGRESS = 1;
-    // 设置Seebar最大进度
-    private static final int SET_SEEKBAR_MAX = 2;
+
 
     private Handler handler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
             super.handleMessage(msg);
             switch (msg.what){
-                case UPDATE_PROGRESS:
+                case ConstUtil.UPDATE_PROGRESS:
                     intent = new Intent();
                     int currtTime = mediaPlayer.getCurrentPosition();
                     intent.putExtra("currtTime",mediaPlayer.getCurrentPosition());
                     intent.setAction(ConstUtil.SEEKBAR_ACTION);
                     sendBroadcast(intent);
-                    handler.sendEmptyMessageDelayed(UPDATE_PROGRESS,1000);
+                    handler.sendEmptyMessageDelayed(ConstUtil.UPDATE_PROGRESS,1000);
                     break;
 
-                case SET_SEEKBAR_MAX:
+                case ConstUtil.SET_SEEKBAR_MAX:
                     intent = new Intent();
                     int count = mediaPlayer.getDuration();
                     intent.putExtra("count",count);
@@ -127,7 +124,8 @@ public class MyMusicPlayerService extends Service implements MediaPlayer.OnCompl
         files = AudioUtils.getAllSongs(context);
         currIndex = position;
         play();
-        MainActivity.isPlaying = true;
+        ListActivity.isPlaying = true;
+        ListActivity.bt_play.setImageResource(R.drawable.icon_pause_normal);
         return super.onStartCommand(intent, flags, startId);
     }
 
@@ -189,9 +187,9 @@ public class MyMusicPlayerService extends Service implements MediaPlayer.OnCompl
             }
 //            mediaPlayer.setDataSource(path+"/"+filename);//设置路径
             mediaPlayer.prepare();//准备
-            //发送广播停止前台Activity更新界面
-            refreshUI(context);
             mediaPlayer.start();
+            //发送广播停止前台ListActivity更新界面
+            refreshList(context);
             isauto = true;
         } catch (Exception e) {
             e.printStackTrace();
@@ -202,12 +200,14 @@ public class MyMusicPlayerService extends Service implements MediaPlayer.OnCompl
 
     //设置图片大小
     private void getBitmapDrawable(BitmapDrawable bmpDraw) {
-        WindowManager windowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+        WindowManager windowManager =
+                (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
 
         DisplayMetrics metric = new DisplayMetrics();
         windowManager.getDefaultDisplay().getMetrics(metric);
 //            int width = windowManager.getDefaultDisplay().getWidth();
-        RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) MainActivity.imageView.getLayoutParams();
+        RelativeLayout.LayoutParams params =
+                (RelativeLayout.LayoutParams) MainActivity.imageView.getLayoutParams();
         params.height = metric.widthPixels;
         params.width = metric.widthPixels;
         MainActivity.imageView.setLayoutParams(params);
@@ -228,10 +228,12 @@ public class MyMusicPlayerService extends Service implements MediaPlayer.OnCompl
                             play();
                         }
                         state = ConstUtil.STATE_PLAY;
+                        ListActivity.bt_play.setImageResource(R.drawable.icon_pause_normal);
                         break;
                     case ConstUtil.STATE_PAUSE://暂停播放
                             mediaPlayer.pause();
                             state = ConstUtil.STATE_PAUSE;
+                        ListActivity.bt_play.setImageResource(R.drawable.icon_play_normal);
                         break;
                     case ConstUtil.STATE_STOP://停止播放
                         if (control == ConstUtil.STATE_PLAY || control == ConstUtil.STATE_PAUSE) {
@@ -242,14 +244,23 @@ public class MyMusicPlayerService extends Service implements MediaPlayer.OnCompl
                     case ConstUtil.STATE_PREVIOUS://上一首
                         prev();
                         state = ConstUtil.STATE_PLAY;
+                        refreshMain(context);
                         break;
                     case ConstUtil.STATE_NEXT://下一首
                         next();
                         state = ConstUtil.STATE_PLAY;
                         break;
-                    case ConstUtil.REFRESHUI:
-                        refreshUI(context);
+                    case ConstUtil.STATE_MAINNEXT:
+                        next();
+                        refreshMain(context);
+                        state = ConstUtil.STATE_PLAY;
                         break;
+                    case ConstUtil.REFRESHLIST:
+                        refreshList(context);
+                        break;
+                    case ConstUtil.REFRESHMAIN:
+                        refreshMain(context);
+                        MainActivity.ibPlay.setImageResource(R.drawable.player_pause);
                     default:
                         break;
                 }
@@ -257,20 +268,39 @@ public class MyMusicPlayerService extends Service implements MediaPlayer.OnCompl
 
     };
 
-    private void refreshUI(Context context) {
-        MainActivity.songName.setText(files.get(currIndex).getFileName());
+    //刷新ListActivity
+    private void refreshList(Context context) {
         //获取专辑图片
         String albumArt = AudioUtils.getAlbumArt(files.get(currIndex).getAlbumpic(), context);
         Bitmap bm = BitmapFactory.decodeFile(albumArt);
+        BitmapDrawable bmpDraw = new BitmapDrawable(bm);
+        ListActivity.iv_header.setImageDrawable(bmpDraw);
+        //获取歌手和歌曲
+        Song s = files.get(currIndex);
+        ListActivity.tv_musicname.setText(s.getFileName().trim());
+        handler.sendEmptyMessage(ConstUtil.SET_SEEKBAR_MAX);
+        handler.sendEmptyMessage(ConstUtil.UPDATE_PROGRESS);
+    }
+
+    //刷新MainActivity
+    private void refreshMain(Context context){
+        //获取专辑图片
+        files = AudioUtils.getAllSongs(context);
+        String albumArt =
+                AudioUtils.getAlbumArt(files.get(MyMusicPlayerService.currIndex).getAlbumpic(), context);
+        Bitmap bm = BitmapFactory.decodeFile(albumArt);
+        BitmapDrawable bmpDraw = new BitmapDrawable(bm);
         if(albumArt == null){
             MainActivity.imageView.setImageResource(R.drawable.bg);
         }else {
-            BitmapDrawable bmpDraw = new BitmapDrawable(bm);
             getBitmapDrawable(bmpDraw);
         }
-
-        handler.sendEmptyMessage(SET_SEEKBAR_MAX);
-        handler.sendEmptyMessage(UPDATE_PROGRESS);
+        //获取歌曲名
+        String songName = files.get(MyMusicPlayerService.currIndex).getFileName();
+        MainActivity.songName.setText(songName);
+        //发消息更新seekBar
+        handler.sendEmptyMessage(ConstUtil.SET_SEEKBAR_MAX);
+        handler.sendEmptyMessage(ConstUtil.UPDATE_PROGRESS);
     }
 
 
